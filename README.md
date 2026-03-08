@@ -29,10 +29,10 @@ Based on the mood, a visual prompt is auto-suggested for you.
 
 ### 3. Choose Your Generation Mode
 
-#### 🖼️ Images Mode (~$0.01 · ~10 seconds)
+#### 🖼️ Images Mode (~$0.01 · ~10 seconds loading time)
 Generates **4 AI still frames** using **FLUX Schnell** (by Black Forest Labs via fal.ai). Fast, cheap, great for previewing your visual style before committing to video.
 
-#### 🎬 Video Mode (~$0.70 · ~2 minutes)
+#### 🎬 Video Mode (~$0.70 · 5 seconds ~2 minutes loading time)
 Generates **2 cinematic video clips** (5s or 10s each) using **Kling v2.1 Master** (by Kuaishou via fal.ai). Full motion, 16:9, cinema-quality output. Each clip is independently prompted for variety.
 
 ### 4. Pick a Visual Style
@@ -108,13 +108,6 @@ The mood is used to auto-suggest a visual prompt and influence how style and mot
 
 ### Backend
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-# Create .env with your key
-echo "FAL_KEY=your_fal_api_key" > .env
 
 uvicorn app.main:app --reload --port 8080
 ```
