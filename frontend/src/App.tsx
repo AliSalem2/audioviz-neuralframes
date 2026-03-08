@@ -3,21 +3,24 @@ import { Upload, Sparkles, Music2 } from 'lucide-react'
 import Waveform from './components/Waveform'
 import StemVisualizer from './components/StemVisualizer'
 import StyleSelector from './components/StyleSelector'
+import ModeSelector from './components/ModeSelector'
 import Results from './components/Results'
 import { analyzeAudio, startGeneration, getJobStatus } from './services/api'
 import type { AudioAnalysis, Job, Style } from './types'
 
 export default function App() {
-  const [audioFile, setAudioFile] = useState<File | null>(null)
-  const [analysis, setAnalysis] = useState<AudioAnalysis | null>(null)
-  const [prompt, setPrompt] = useState('')
-  const [style, setStyle] = useState<Style>('cinematic')
-  const [job, setJob] = useState<Job | null>(null)
-  const [analyzing, setAnalyzing] = useState(false)
+  const [audioFile, setAudioFile]   = useState<File | null>(null)
+  const [analysis, setAnalysis]     = useState<AudioAnalysis | null>(null)
+  const [prompt, setPrompt]         = useState('')
+  const [style, setStyle]           = useState<Style>('cinematic')
+  const [mode, setMode]             = useState<'images' | 'video'>('images')
+  const [duration, setDuration]     = useState(5)
+  const [job, setJob]               = useState<Job | null>(null)
+  const [analyzing, setAnalyzing]   = useState(false)
   const [generating, setGenerating] = useState(false)
-  const [dragOver, setDragOver] = useState(false)
+  const [dragOver, setDragOver]     = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const handleFile = useCallback(async (file: File) => {
     setAudioFile(file)
@@ -27,7 +30,6 @@ export default function App() {
     try {
       const result = await analyzeAudio(file)
       setAnalysis(result)
-      // Auto-suggest prompt based on mood
       const suggestions: Record<string, string> = {
         energetic: 'Electric energy, lightning bolts, explosive motion, vibrant colors',
         upbeat:    'Colorful particles, dancing lights, joyful motion, bright atmosphere',
@@ -37,7 +39,7 @@ export default function App() {
       }
       setPrompt(suggestions[result.mood] || 'Beautiful abstract visuals with dynamic motion')
     } catch (e) {
-      console.error(e)
+      console.error('Audio analysis failed:', e)
     } finally {
       setAnalyzing(false)
     }
@@ -54,18 +56,17 @@ export default function App() {
     if (!prompt.trim()) return
     setGenerating(true)
     setJob(null)
-
     try {
       const { job_id } = await startGeneration({
         session_id: analysis?.session_id || 'manual-' + Date.now(),
         prompt,
         style,
-        bpm: analysis?.bpm || 120,
-        mood: analysis?.mood || 'moderate',
+        mode,
+        duration,
+        bpm:   analysis?.bpm   || 120,
+        mood:  analysis?.mood  || 'moderate',
         stems: analysis?.stems || {},
       })
-
-      // Start polling
       if (pollRef.current) clearInterval(pollRef.current)
       pollRef.current = setInterval(async () => {
         try {
@@ -76,7 +77,7 @@ export default function App() {
             setGenerating(false)
           }
         } catch {}
-      }, 1500)
+      }, 2000)
     } catch (e) {
       console.error(e)
       setGenerating(false)
@@ -85,7 +86,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0f0f1a] text-white">
-      {/* Header */}
       <header className="border-b border-white/10 px-6 py-4 flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
           <Music2 size={16} />
@@ -97,11 +97,7 @@ export default function App() {
       </header>
 
       <main className="max-w-5xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Left column */}
         <div className="space-y-4">
-
-          {/* Upload zone */}
           <div
             onClick={() => fileInputRef.current?.click()}
             onDrop={handleDrop}
@@ -123,15 +119,11 @@ export default function App() {
               {audioFile ? audioFile.name : 'Drop your audio file here'}
             </p>
             <p className="text-xs text-white/30 mt-1">MP3, WAV, OGG, FLAC supported</p>
-            {analyzing && (
-              <p className="text-xs text-purple-400 mt-2 animate-pulse">Analyzing audio…</p>
-            )}
+            {analyzing && <p className="text-xs text-purple-400 mt-2 animate-pulse">Analyzing audio…</p>}
           </div>
 
-          {/* Waveform */}
           <Waveform file={audioFile} />
 
-          {/* Stems */}
           {analysis && (
             <StemVisualizer
               stems={analysis.stems}
@@ -142,14 +134,9 @@ export default function App() {
           )}
         </div>
 
-        {/* Right column */}
         <div className="space-y-4">
-
-          {/* Prompt */}
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">
-              Visual Prompt
-            </label>
+            <label className="block text-sm font-medium text-white/70 mb-2">Visual Prompt</label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -159,10 +146,15 @@ export default function App() {
             />
           </div>
 
-          {/* Style selector */}
           <StyleSelector value={style} onChange={setStyle} />
 
-          {/* Generate button */}
+          <ModeSelector
+            mode={mode}
+            duration={duration}
+            onChange={setMode}
+            onDurationChange={setDuration}
+          />
+
           <button
             onClick={handleGenerate}
             disabled={!prompt.trim() || generating}
@@ -171,11 +163,13 @@ export default function App() {
               disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Sparkles size={16} />
-            {generating ? 'Generating…' : 'Generate Visuals'}
+            {generating
+              ? mode === 'video' ? 'Generating Video…' : 'Generating Images…'
+              : mode === 'video' ? '🎬 Generate Video' : '🖼️ Generate Images'
+            }
           </button>
 
-          {/* Results */}
-          <Results job={job} />
+          <Results job={job} mode={mode} />
         </div>
       </main>
     </div>
