@@ -131,7 +131,7 @@ Open http://localhost:5173
 
 ### Backend → GCP Cloud Run
 ```bash
-export FAL_KEY=your_fal_key
+export FAL_KEY=fal_key
 chmod +x deploy.sh
 ./deploy.sh
 ```
